@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>值得买助手</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --surface-2: #eef1f5;
+    --line: #dfe4ea;
+    --ink: #23272e;
+    --ink-muted: #6b7480;
+    --ink-faint: #97a0ab;
+    --accent: #c2571f;
+    --accent-hover: #a94a18;
+    --accent-soft: #f9ede4;
+    --success: #3f7a55;
+    --success-soft: #e6f1ea;
+    --danger: #a8503f;
+    --danger-soft: #f7e9e5;
+    --warning: #9a6b28;
+    --warning-soft: #f6efdf;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Microsoft YaHei UI", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+    overflow: hidden;
+  }
+
+  body { display: flex; flex-direction: column; }
+
+  button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  input[type="text"], input[type="password"], input[type="number"], input[type="time"], select {
+    font: inherit;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 6px 9px;
+    outline: none;
+    min-width: 0;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+
+  .icon {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+  }
+
+  /* ---- 标题栏 ---- */
+  .titlebar {
+    height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px 0 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    -webkit-app-region: drag;
+    flex: none;
+  }
+  .titlebar .mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+  .titlebar .who { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+  .titlebar .who b { font-size: 13px; font-weight: 600; }
+  .titlebar .who span { font-size: 11px; color: var(--ink-faint); }
+  .titlebar .spacer { flex: 1; }
+  .icon-btn {
+    -webkit-app-region: no-drag;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-muted);
+  }
+  .icon-btn:hover { background: var(--surface-2); color: var(--ink); }
+
+  /* ---- 页签 ---- */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 8px 12px 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    flex: none;
+  }
+  .tab {
+    padding: 7px 14px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    color: var(--ink-muted);
+    font-size: 13px;
+    border-bottom: 2px solid transparent;
+  }
+  .tab:hover { color: var(--ink); background: var(--surface-2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  .page { flex: 1; overflow-y: auto; padding: 12px; display: none; }
+  .page.active { display: block; }
+
+  /* ---- 通用卡片 ---- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .card h3 {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hint { font-size: 11.5px; color: var(--ink-faint); margin: 2px 0 8px; }
+
+  .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+  .row label { font-size: 12.5px; color: var(--ink-muted); }
+  .row input[type="text"], .row input[type="password"], .row input[type="number"] { flex: 1; }
+  .row input[type="time"], .row select { width: auto; }
+
+  .btn {
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: #fff;
+    font-size: 12.5px;
+    flex: none;
+  }
+  .btn:hover { background: var(--accent-hover); }
+  .btn.ghost { background: var(--surface-2); color: var(--ink-muted); }
+  .btn.ghost:hover { color: var(--ink); }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+
+  .status-line { font-size: 12px; color: var(--ink-muted); min-height: 18px; margin-top: 6px; }
+  .status-line.ok { color: var(--success); }
+  .status-line.bad { color: var(--danger); }
+
+  .check-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+  .check-row input[type="checkbox"] { accent-color: var(--accent); }
+  .check-row span { font-size: 12.5px; color: var(--ink); }
+
+  /* ---- 好价结果 ---- */
+  .deal {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 9px 10px;
+    margin-bottom: 8px;
+    background: var(--surface);
+  }
+  .deal .top { display: flex; gap: 8px; align-items: baseline; }
+  .deal .t { flex: 1; font-size: 12.5px; font-weight: 600; word-break: break-word; }
+  .deal .p { color: var(--accent); font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .deal .sub {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+  .deal .mall {
+    background: var(--surface-2);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--ink-muted);
+  }
+  .deal .copy {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .deal .copy:hover { background: var(--accent-soft); }
+
+  .empty { color: var(--ink-faint); font-size: 12px; text-align: center; padding: 18px 0; }
+
+  .morning-item { display: flex; gap: 8px; margin: 6px 0; align-items: baseline; }
+  .morning-item .no { color: var(--accent); font-weight: 700; flex: none; }
+  .morning-item .txt { flex: 1; font-size: 12.5px; word-break: break-word; }
+  .tag {
+    display: inline-block;
+    font-size: 10.5px;
+    padding: 1px 7px;
+    border-radius: 8px;
+    background: var(--success-soft);
+    color: var(--success);
+    flex: none;
+  }
+
+  /* ---- 监控列表 ---- */
+  .mon {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background: var(--surface);
+  }
+  .mon.hit { border-color: var(--danger); background: var(--danger-soft); }
+  .mon .kw { font-weight: 600; font-size: 12.5px; flex: 1; min-width: 0; word-break: break-word; }
+  .mon .meta { font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
+  .mon .meta .hit-price { color: var(--danger); font-weight: 700; }
+  .mon .err { flex: 1 1 100%; font-size: 11px; color: var(--danger); white-space: normal; }
+  .mon .del { color: var(--ink-faint); padding: 2px 6px; border-radius: 4px; flex: none; }
+  .mon .del:hover { color: var(--danger); background: var(--danger-soft); }
+
+  .foot-note {
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  /* ---- 提示条 ---- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: #fff;
+    font-size: 12px;
+    padding: 7px 14px;
+    border-radius: 18px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    max-width: 86%;
+    z-index: 9;
+  }
+  .toast.show { opacity: 0.94; }
+  .toast.err { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <div class="mark">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4"/><path d="M7 9h.01"/><path d="M16.5 15.5 14 18l-1-1"/></svg>
+  </div>
+  <div class="who">
+    <b>值得买助手</b>
+    <span>好价搜索 · 降价监控 · 全网口碑</span>
+  </div>
+  <div class="spacer"></div>
+  <button class="icon-btn" id="btn-close" title="关闭">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+  </button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-page="settings">设置</button>
+  <button class="tab" data-page="deals">好价</button>
+  <button class="tab" data-page="monitor">监控</button>
+</div>
+
+<div class="page active" id="page-settings">
+  <div class="card">
+    <h3>开放平台 API Key</h3>
+    <div class="hint">每位用户填写自己的 Key（在什么值得买开放平台申请）。Key 只存在本机密钥区，不会明文落盘。</div>
+    <div class="row">
+      <input type="password" id="key-input" placeholder="粘贴 x-api-key…" autocomplete="off" />
+      <button class="btn" id="btn-key-save">保存</button>
+      <button class="btn ghost" id="btn-key-clear">清除</button>
+    </div>
+    <div class="status-line" id="key-status">正在获取 Key 状态…</div>
+  </div>
+
+  <div class="card">
+    <h3>好价早报</h3>
+    <div class="check-row"><input type="checkbox" id="set-morning-on" /><span>每天早上播报今日好价</span></div>
+    <div class="row">
+      <label for="set-morning-time">播报时间</label>
+      <input type="time" id="set-morning-time" />
+      <label for="set-morning-count">条数</label>
+      <select id="set-morning-count">
+        <option value="3">3 条</option><option value="5">5 条</option>
+        <option value="8">8 条</option><option value="10">10 条</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>降价监控</h3>
+    <div class="check-row"><input type="checkbox" id="set-monitor-on" /><span>定时轮询监控列表</span></div>
+    <div class="row">
+      <label for="set-monitor-hours">轮询间隔</label>
+      <select id="set-monitor-hours">
+        <option value="1">1 小时</option><option value="2">2 小时</option>
+        <option value="4">4 小时</option><option value="6">6 小时</option>
+        <option value="12">12 小时</option>
+      </select>
+      <span class="hint" style="margin:0">轮询会消耗平台配额，默认 2 小时</span>
+    </div>
+    <div class="row" style="justify-content:flex-end; margin-bottom:0">
+      <button class="btn" id="btn-save-settings">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-deals">
+  <div class="card" id="morning-box" style="display:none">
+    <h3>今早播报 <span class="tag" id="morning-tag" style="display:none">宠物口吻</span></h3>
+    <div class="hint" id="morning-when"></div>
+    <div id="morning-list"></div>
+  </div>
+
+  <div class="card">
+    <h3>搜好价</h3>
+    <form class="row" id="deal-form" style="margin-bottom:4px">
+      <input type="text" id="deal-q" placeholder="想买点什么？如 机械键盘 / 咖啡豆…" maxlength="60" style="flex:1" />
+      <button class="btn" type="submit" id="btn-deal-search">搜索</button>
+    </form>
+    <div id="deal-results"><div class="empty">输入关键词搜一搜今天的好价</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-monitor">
+  <div class="card">
+    <h3>添加监控</h3>
+    <div class="hint">关键词 + 目标价。低于等于目标价时宠物会冒泡提醒你。</div>
+    <form class="row" id="mon-form" style="margin-bottom:4px">
+      <input type="text" id="mon-kw" placeholder="关键词，如 3070 显卡" maxlength="40" style="flex:2" />
+      <input type="number" id="mon-price" placeholder="目标价" min="0.01" step="0.01" style="flex:1" />
+      <button class="btn" type="submit">添加</button>
+    </form>
+    <div class="status-line bad" id="mon-error"></div>
+  </div>
+
+  <div id="mon-list"></div>
+  <div class="foot-note">价格数据来自什么值得买，下单前请以商品页实际价格为准</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORE_SETTINGS = 'smzdm:settings';
+  var STORE_MONITOR = 'smzdm:monitor';
+  var STORE_MORNING = 'smzdm:cache:morning';
+  var EVT = {
+    KEY_SAVE: 'smzdm:key-save',
+    KEY_CLEAR: 'smzdm:key-clear',
+    KEY_QUERY: 'smzdm:key-query',
+    KEY_STATUS: 'smzdm:key-status',
+    SEARCH: 'smzdm:search',
+    SEARCH_RESULT: 'smzdm:search-result',
+    MONITOR_ADD: 'smzdm:monitor-add',
+    MONITOR_REMOVE: 'smzdm:monitor-remove',
+    MONITOR_CHANGED: 'smzdm:monitor-changed',
+    SETTINGS_SAVE: 'smzdm:settings-save',
+    SETTINGS_CHANGED: 'smzdm:settings-changed',
+    MORNING: 'smzdm:morning'
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var toastTimer = null;
+  var searchSeq = 0;
+  var pendingReqId = '';
+
+  function toast(message, isError) {
+    var el = $('toast');
+    el.textContent = message;
+    el.className = 'toast show' + (isError ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.className = 'toast'; }, 2600);
+  }
+
+  // ---- 页签 ----
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {
+    tab.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) { t.classList.remove('active'); });
+      Array.prototype.forEach.call(document.querySelectorAll('.page'), function (p) { p.classList.remove('active'); });
+      tab.classList.add('active');
+      $('page-' + tab.getAttribute('data-page')).classList.add('active');
+    });
+  });
+
+  // ---- 设置页 ----
+  function fillSettings(s) {
+    $('set-morning-on').checked = s.morningEnabled !== false;
+    $('set-morning-time').value = s.morningTime || '08:30';
+    $('set-morning-count').value = String(s.morningCount || 5);
+    $('set-monitor-on').checked = s.monitorEnabled !== false;
+    $('set-monitor-hours').value = String(s.monitorHours || 2);
+  }
+
+  function loadSettings() {
+    return pet.storage.get(STORE_SETTINGS, {}).then(function (s) { fillSettings(s || {}); });
+  }
+
+  function saveSettings() {
+    pet.storage.get(STORE_SETTINGS, {}).then(function (s) {
+      var next = s && typeof s === 'object' ? s : {};
+      next.morningEnabled = $('set-morning-on').checked;
+      next.morningTime = $('set-morning-time').value || '08:30';
+      next.morningCount = Number($('set-morning-count').value) || 5;
+      next.monitorEnabled = $('set-monitor-on').checked;
+      next.monitorHours = Number($('set-monitor-hours').value) || 2;
+      return pet.storage.set(STORE_SETTINGS, next).then(function () {
+        return pet.events.emit(EVT.SETTINGS_SAVE, next).catch(function () {});
+      });
+    }).then(function () {
+      toast('设置已保存');
+    }).catch(function () { toast('保存失败', true); });
+  }
+
+  function setKeyStatus(text, cls) {
+    var el = $('key-status');
+    el.textContent = text;
+    el.className = 'status-line' + (cls ? ' ' + cls : '');
+  }
+
+  function saveKey() {
+    var key = $('key-input').value.trim();
+    if (!key) { toast('先粘贴 Key', true); return; }
+    setKeyStatus('正在验证连通性…', '');
+    pet.events.emit(EVT.KEY_SAVE, { key: key }).catch(function () {
+      setKeyStatus('发送失败：常驻能力层未就绪', 'bad');
+    });
+  }
+
+  function clearKey() {
+    pet.events.emit(EVT.KEY_CLEAR).catch(function () {});
+    $('key-input').value = '';
+    setKeyStatus('正在清除…', '');
+  }
+
+  // ---- 好价页 ----
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function priceText(it) {
+    if (typeof it.price === 'number' && isFinite(it.price)) return it.price + '元';
+    if (typeof it.price === 'string' && it.price) return /元/.test(it.price) ? it.price : it.price + '元';
+    return it.priceText || '';
+  }
+
+  function renderMorning(cache) {
+    var box = $('morning-box');
+    if (!cache || !Array.isArray(cache.items) || !cache.items.length) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    var d = cache.at ? new Date(cache.at) : null;
+    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    $('morning-when').textContent = d ? '播报于 ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) : '';
+    $('morning-tag').style.display = cache.polished ? '' : 'none';
+    var html = '';
+    cache.items.slice(0, 3).forEach(function (it, i) {
+      var blurb = '';
+      if (Array.isArray(cache.polished)) {
+        for (var j = 0; j < cache.polished.length; j++) {
+          if (cache.polished[j] && it.title.indexOf(String(cache.polished[j].title || '').slice(0, 12)) === 0) {
+            blurb = cache.polished[j].blurb; break;
+          }
+        }
+      }
+      html += '<div class="morning-item"><span class="no">' + (i + 1) + '.</span><span class="txt">' +
+        esc(blurb || it.title) + (typeof it.price === 'number' ? '（' + esc(it.price) + '元）' : '') + '</span></div>';
+    });
+    $('morning-list').innerHTML = html;
+  }
+
+  function loadMorning() {
+    return pet.storage.get(STORE_MORNING, null).then(renderMorning);
+  }
+
+  function renderDealResults(items) {
+    if (!items || !items.length) {
+      $('deal-results').innerHTML = '<div class="empty">没有搜到相关好价，换个关键词试试</div>';
+      return;
+    }
+    var html = '';
+    items.forEach(function (it) {
+      html += '<div class="deal"><div class="top"><span class="t">' + esc(it.title) + '</span>' +
+        '<span class="p">' + esc(priceText(it)) + '</span></div>' +
+        '<div class="sub"><span class="mall">' + esc(it.mall || '商城未知') + '</span>' +
+        (it.url ? '<button class="copy" data-url="' + esc(it.url) + '">复制链接</button>' : '') +
+        '</div></div>';
+    });
+    $('deal-results').innerHTML = html;
+    Array.prototype.forEach.call(document.querySelectorAll('.deal .copy'), function (btn) {
+      btn.addEventListener('click', function () {
+        var url = btn.getAttribute('data-url');
+        pet.ui.copyText(url).then(function () { toast('链接已复制'); })
+          .catch(function () { toast('复制失败', true); });
+      });
+    });
+  }
+
+  function runSearch() {
+    var q = $('deal-q').value.trim();
+    if (!q) { toast('先输入关键词', true); return; }
+    if (pendingReqId) { toast('上一个搜索还在跑，稍等', true); return; }
+    pendingReqId = 'q' + Date.now().toString(36) + (++searchSeq);
+    $('btn-deal-search').disabled = true;
+    $('deal-results').innerHTML = '<div class="empty">正在搜索…</div>';
+    pet.events.emit(EVT.SEARCH, {
+      reqId: pendingReqId,
+      kind: 'deals',
+      params: { query: q, size: 10 }
+    }).catch(function () {
+      pendingReqId = '';
+      $('btn-deal-search').disabled = false;
+      $('deal-results').innerHTML = '<div class="empty">发送失败：常驻能力层未就绪</div>';
+    });
+  }
+
+  // ---- 监控页 ----
+  function whenText(ts) {
+    if (!ts) return '未查过';
+    var d = new Date(ts);
+    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    var now = new Date();
+    var sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    return (sameDay ? '今天 ' : (d.getMonth() + 1) + '月' + d.getDate() + '日 ') + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function renderMonitor(list) {
+    if (!list || !list.length) {
+      $('mon-list').innerHTML = '<div class="empty">还没有监控项，上面加一个</div>';
+      return;
+    }
+    var html = '';
+    list.forEach(function (it) {
+      var hit = it.hitPrice != null;
+      var meta;
+      if (hit) meta = '<span class="hit-price">命中 ¥' + esc(it.hitPrice) + '</span> · 目标 ¥' + esc(it.targetPrice);
+      else if (it.lastPrice != null) meta = '现价 ¥' + esc(it.lastPrice) + ' · 目标 ¥' + esc(it.targetPrice);
+      else meta = '目标 ¥' + esc(it.targetPrice);
+      html += '<div class="mon' + (hit ? ' hit' : '') + '">' +
+        '<span class="kw">' + esc(it.keyword) + '</span>' +
+        '<span class="meta">' + meta + ' · ' + whenText(it.lastCheckedAt) + '</span>' +
+        (it.lastError ? '<span class="err">查询失败：' + esc(it.lastError) + '</span>' : '') +
+        '<button class="del" data-id="' + esc(it.id) + '" title="删除">移除</button></div>';
+    });
+    $('mon-list').innerHTML = html;
+    Array.prototype.forEach.call(document.querySelectorAll('.mon .del'), function (btn) {
+      btn.addEventListener('click', function () {
+        pet.events.emit(EVT.MONITOR_REMOVE, { id: btn.getAttribute('data-id') }).catch(function () {});
+      });
+    });
+  }
+
+  function loadMonitor() {
+    return pet.storage.get(STORE_MONITOR, []).then(function (raw) {
+      renderMonitor(Array.isArray(raw) ? raw : []);
+    });
+  }
+
+  function addMonitor() {
+    var kw = $('mon-kw').value.trim();
+    var price = Number($('mon-price').value);
+    $('mon-error').textContent = '';
+    if (!kw) { $('mon-error').textContent = '关键词必填'; return; }
+    if (!(price > 0)) { $('mon-error').textContent = '目标价必须是大于 0 的数字'; return; }
+    pet.events.emit(EVT.MONITOR_ADD, { keyword: kw, targetPrice: price }).catch(function () {
+      $('mon-error').textContent = '发送失败：常驻能力层未就绪';
+    });
+    $('mon-kw').value = '';
+    $('mon-price').value = '';
+  }
+
+  // ---- 事件 ----
+  pet.events.on(EVT.KEY_STATUS, function (data) {
+    var d = data || {};
+    if (d.valid) setKeyStatus('Key 已连通', 'ok');
+    else if (d.hasKey) setKeyStatus(d.message || 'Key 保存了但还没验证通过', 'bad');
+    else setKeyStatus(d.message || '未设置 Key', d.message === '已清除' ? '' : 'bad');
+  });
+
+  pet.events.on(EVT.SEARCH_RESULT, function (data) {
+    var d = data || {};
+    if (d.reqId !== pendingReqId) return;
+    pendingReqId = '';
+    $('btn-deal-search').disabled = false;
+    if (d.ok) renderDealResults(d.items);
+    else $('deal-results').innerHTML = '<div class="empty">' + esc(d.error || '查询失败') + '</div>';
+  });
+
+  pet.events.on(EVT.MONITOR_CHANGED, function (data) {
+    var d = data || {};
+    if (d.error) { $('mon-error').textContent = d.error; }
+    if (Array.isArray(d.items)) renderMonitor(d.items);
+    else loadMonitor().catch(function () {});
+  });
+
+  pet.events.on(EVT.SETTINGS_CHANGED, function () {
+    loadSettings().catch(function () {});
+  });
+
+  pet.events.on(EVT.MORNING, function () {
+    loadMorning().catch(function () {});
+  });
+
+  $('btn-close').addEventListener('click', function () { pet.ui.closePanel().catch(function () {}); });
+  $('btn-key-save').addEventListener('click', saveKey);
+  $('btn-key-clear').addEventListener('click', clearKey);
+  $('btn-save-settings').addEventListener('click', saveSettings);
+  $('deal-form').addEventListener('submit', function (e) { e.preventDefault(); runSearch(); });
+  $('mon-form').addEventListener('submit', function (e) { e.preventDefault(); addMonitor(); });
+  $('key-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') saveKey(); });
+
+  // 打开面板就向常驻层要一次 Key 状态
+  pet.events.emit(EVT.KEY_QUERY, {}).catch(function () {});
+
+  loadSettings().catch(function () {});
+  loadMorning().catch(function () {});
+  loadMonitor().catch(function () {});
+})();
+</script>
+</body>
+</html>

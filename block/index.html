@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>值得买助手 · 看板卡片</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface-2: #eef1f5;
+    --line: #dfe4ea;
+    --ink: #23272e;
+    --ink-muted: #6b7480;
+    --ink-faint: #97a0ab;
+    --accent: #c2571f;
+    --accent-soft: #f9ede4;
+    --success: #3f7a55;
+    --success-soft: #e6f1ea;
+    --danger: #a8503f;
+    --danger-soft: #f7e9e5;
+    --radius: 10px;
+    --radius-sm: 7px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Microsoft YaHei UI", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .icon {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px 0;
+  }
+  .head .mark {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+  .head b { font-size: 12.5px; font-weight: 600; }
+  .head .spacer { flex: 1; }
+  .head .sum { color: var(--ink-faint); font-size: 11px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 10px 12px 0;
+  }
+  .stat {
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    background: var(--surface-2);
+  }
+  .stat b { display: block; font-size: 17px; line-height: 1.25; }
+  .stat span { font-size: 11px; color: var(--ink-muted); }
+  .stat.deals b { color: var(--accent); }
+  .stat.hit b { color: var(--danger); }
+  .stat.hit.hot { background: var(--danger-soft); }
+  .stat.next b { font-size: 13px; padding-top: 3px; }
+
+  .list { padding: 8px 12px 0; }
+  .item {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .item:last-child { border-bottom: 0; }
+  .item .no { color: var(--accent); font-weight: 700; flex: none; font-size: 11.5px; }
+  .item .txt { flex: 1; font-size: 12px; word-break: break-word; }
+  .item .p { color: var(--accent); font-weight: 600; flex: none; }
+
+  .tip {
+    margin: 10px 12px 0;
+    padding: 8px 10px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    color: var(--ink-faint);
+    font-size: 11.5px;
+  }
+
+  .foot {
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    text-align: center;
+    padding: 8px 12px 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="mark">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4"/><path d="M7 9h.01"/><path d="M16.5 15.5 14 18l-1-1"/></svg>
+  </div>
+  <b>值得买助手</b>
+  <div class="spacer"></div>
+  <span class="sum" id="sum">--</span>
+</div>
+
+<div class="stats">
+  <div class="stat deals"><b id="st-deals">-</b><span>今日好价</span></div>
+  <div class="stat hit" id="st-hit-box"><b id="st-hit">-</b><span>监控命中</span></div>
+  <div class="stat next"><b id="st-next">--:--</b><span>下次播报</span></div>
+</div>
+
+<div class="list" id="deal-list"></div>
+
+<div class="tip" id="tip" style="display:none"></div>
+
+<div class="foot">价格以商品页为准 · 监控轮询可在面板关闭</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORE_SETTINGS = 'smzdm:settings';
+  var STORE_MONITOR = 'smzdm:monitor';
+  var STORE_MORNING = 'smzdm:cache:morning';
+  var EVT = {
+    MONITOR_CHANGED: 'smzdm:monitor-changed',
+    SETTINGS_CHANGED: 'smzdm:settings-changed',
+    MORNING: 'smzdm:morning',
+    DEAL_ALERT: 'smzdm:deal-alert',
+    KEY_STATUS: 'smzdm:key-status'
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function nextBroadcastAt(hhmm) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+    if (!m) return null;
+    var now = new Date();
+    var t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(m[1]), Number(m[2]), 0, 0);
+    if (t.getTime() <= now.getTime()) t = new Date(t.getTime() + 24 * 3600 * 1000);
+    return t;
+  }
+
+  function render(settings, monitor, morning) {
+    var s = settings || {};
+    var list = Array.isArray(monitor) ? monitor : [];
+    var hits = list.filter(function (it) { return it && it.hitPrice != null; }).length;
+    var hasMorning = morning && Array.isArray(morning.items) && morning.items.length;
+    var today = hasMorning && morning.date === (function () {
+      var d = new Date();
+      var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    })();
+
+    $('st-deals').textContent = today ? String(morning.items.length) : '0';
+    $('st-hit').textContent = String(hits);
+    $('st-hit-box').className = 'stat hit' + (hits ? ' hot' : '');
+
+    var nb = nextBroadcastAt(s.morningEnabled === false ? '' : s.morningTime);
+    if (nb && s.morningEnabled !== false) {
+      var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+      $('st-next').textContent = pad(nb.getHours()) + ':' + pad(nb.getMinutes());
+      $('sum').textContent = '早报 ' + (s.morningTime || '08:30');
+    } else {
+      $('st-next').textContent = '已关';
+      $('sum').textContent = '早报已关闭';
+    }
+
+    var html = '';
+    if (today) {
+      morning.items.slice(0, 3).forEach(function (it, i) {
+        html += '<div class="item"><span class="no">' + (i + 1) + '.</span>' +
+          '<span class="txt">' + esc(it.title) + '</span>' +
+          (typeof it.price === 'number' ? '<span class="p">' + esc(it.price) + '元</span>' : '') + '</div>';
+      });
+    }
+    $('deal-list').innerHTML = html;
+
+    var tip = $('tip');
+    if (!today) {
+      tip.style.display = '';
+      tip.textContent = hasMorning
+        ? '今早的播报已过期，明早 ' + (s.morningTime || '08:30') + ' 再来'
+        : '还没有早报：填好 Key 后每天早上自动播报今日好价';
+    } else {
+      tip.style.display = 'none';
+    }
+
+    // 高度按内容自适应后通知宿主。
+    if (pet.dashboard && pet.dashboard.requestHeight) {
+      pet.dashboard.requestHeight(document.body.scrollHeight).catch(function () {});
+    }
+    if (pet.dashboard && pet.dashboard.notifyReady) {
+      pet.dashboard.notifyReady().catch(function () {});
+    }
+  }
+
+  function loadAll() {
+    Promise.all([
+      pet.storage.get(STORE_SETTINGS, {}),
+      pet.storage.get(STORE_MONITOR, []),
+      pet.storage.get(STORE_MORNING, null)
+    ]).then(function (r) {
+      render(r[0], r[1], r[2]);
+    }).catch(function () {
+      // 卡片初始化失败时保持占位，不阻塞看板其它卡片。
+    });
+  }
+
+  if (pet.events && pet.events.on) {
+    [EVT.MONITOR_CHANGED, EVT.SETTINGS_CHANGED, EVT.MORNING, EVT.DEAL_ALERT, EVT.KEY_STATUS]
+      .forEach(function (name) { pet.events.on(name, function () { loadAll(); }); });
+  }
+
+  loadAll();
+})();
+</script>
+</body>
+</html>

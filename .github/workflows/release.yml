@@ -65,5 +65,5 @@ jobs:
           gh release create "$RELEASE_TAG"
           dist/plugin.zip dist/plugin.zip.sha256
           --verify-tag
-          --title "到点提醒 $RELEASE_TAG"
+          --title "值得买助手 $RELEASE_TAG"
           --notes-file dist/release-notes.md
